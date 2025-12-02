@@ -41,47 +41,30 @@ class MainActivity : AppCompatActivity() {
                 }
             })[MovieViewModel::class.java]
 
-        // --- KODE BARU (MENGGANTIKAN LIVEDATA OBSERVE) ---
         // fetch movies from the API
         // lifecycleScope is a lifecycle-aware coroutine scope
         lifecycleScope.launch {
-            // repeatOnLifecycle is a lifecycle-aware coroutine builder
-            // Lifecycle.State.STARTED means that the coroutine will run
-            // when the activity is started
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-
-                // Coroutine 1: Collect Movies
                 launch {
-                    // collect the list of movies from the StateFlow
                     movieViewModel.popularMovies.collect { movies ->
-                        // Logika filter tahun & sorting (dipertahankan dari kode lama)
-                        val currentYear = Calendar.getInstance().get(Calendar.YEAR).toString()
-                        val filteredMovies = movies
-                            .filter { movie ->
-                                movie.releaseDate?.startsWith(currentYear) == true
-                            }
-                            .sortedByDescending { it.popularity }
-
-                        // add the list of movies to the adapter
-                        movieAdapter.addMovies(filteredMovies)
+                        // Data 'movies' di sini SUDAH difilter dan disortir oleh ViewModel
+                        // Langsung masukkan ke adapter
+                        movieAdapter.addMovies(movies)
                     }
                 }
-
-                // Coroutine 2: Collect Error
                 launch {
-                    // collect the error message from the StateFlow
                     movieViewModel.error.collect { error ->
-                        // if an error occurs, show a Snackbar with the error message
                         if (error.isNotEmpty()) {
                             Snackbar.make(
-                                recyclerView, error, Snackbar.LENGTH_LONG
+                                findViewById(R.id.movie_list),
+                                error,
+                                Snackbar.LENGTH_LONG
                             ).show()
                         }
                     }
                 }
             }
         }
-        // --- BATAS KODE BARU ---
     }
 
     private fun openMovieDetails(movie: Movie) {

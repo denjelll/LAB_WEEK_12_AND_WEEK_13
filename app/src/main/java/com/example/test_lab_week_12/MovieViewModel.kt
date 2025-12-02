@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
+import java.util.Calendar
 
 class MovieViewModel(private val movieRepository: MovieRepository) : ViewModel() {
 
@@ -15,29 +16,35 @@ class MovieViewModel(private val movieRepository: MovieRepository) : ViewModel()
         fetchPopularMovies()
     }
 
-    // define the StateFlow in replace of the LiveData
-    // a StateFlow is an observable Flow that emits state updates to the collectors
-    // MutableStateFlow is a StateFlow that you can change the value
+    // StateFlow untuk list film
     private val _popularMovies = MutableStateFlow<List<Movie>>(emptyList())
     val popularMovies: StateFlow<List<Movie>> = _popularMovies
 
+    // StateFlow untuk error
     private val _error = MutableStateFlow("")
     val error: StateFlow<String> = _error
 
-    // fetch movies from the API
     private fun fetchPopularMovies() {
-        // launch a coroutine in viewModelScope
-        // Dispatchers.IO means that this coroutine will run on a shared pool of threads
         viewModelScope.launch(Dispatchers.IO) {
             movieRepository.fetchMovies()
                 .catch { exception ->
-                    // catch is a terminal operator that catches exceptions from the Flow
                     _error.value = "An exception occurred: ${exception.message}"
                 }
                 .collect { movies ->
-                    // collect is a terminal operator that collects the values from the Flow
-                    // the results are emitted to the StateFlow
-                    _popularMovies.value = movies
+                    // --- ASSIGNMENT LOGIC START ---
+                    // 1. Ambil tahun saat ini
+                    val currentYear = Calendar.getInstance().get(Calendar.YEAR).toString()
+
+                    // 2. Lakukan Filter (Tahun ini) & Sorting (Popularitas Tertinggi)
+                    val filteredAndSortedMovies = movies
+                        .filter { movie ->
+                            movie.releaseDate?.startsWith(currentYear) == true
+                        }
+                        .sortedByDescending { it.popularity }
+
+                    // 3. Masukkan data yang sudah diproses ke StateFlow
+                    _popularMovies.value = filteredAndSortedMovies
+                    // --- ASSIGNMENT LOGIC END ---
                 }
         }
     }
